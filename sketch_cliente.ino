@@ -56,7 +56,28 @@ const int scanInterval = 5000;
 int ondas = 0;
 unsigned long tempo = 0;
 
+void movtchau()
+{
 
+ if (abs(receivedAx) > 1.5) {
+    if (millis() - tempo < 500) {
+      ondas++;
+      if (ondas >= 2) {
+        Serial.println("TCHAU!");
+        ondas = 0;
+        delay(1000);
+      }
+    } else {
+      ondas = 1;
+    }
+    tempo = millis();
+    delay(200);
+  }
+
+
+
+
+}
 // ============================================
 // CALLBACK - RECEBE TODOS OS DADOS DE UMA VEZ (CORRIGIDO)
 // ============================================
@@ -153,14 +174,14 @@ bool connectToServer() {
 
   if (pClient == nullptr) {
     pClient = BLEDevice::createClient();
-    Serial.println("✓ Cliente BLE criado");
+    Serial.println(" Cliente BLE criado");
   }
 
   pClient->setClientCallbacks(new MyClientCallback());
 
   Serial.println("Iniciando conexão física...");
   if (!pClient->connect(myDevice)) {
-    Serial.println("❌ Falha na conexão inicial");
+    Serial.println("Falha na conexão inicial");
     return false;
   }
 
@@ -212,7 +233,7 @@ bool connectToServer() {
 }
 
 // ============================================
-// BUSCA DE DISPOSITIVOS
+// CALLBACK DE BUSCA DE DISPOSITIVOS
 // ============================================
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -222,7 +243,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     // Verifica se é o nosso dispositivo pelo UUID do serviço
     if (advertisedDevice.haveServiceUUID() && 
         advertisedDevice.isAdvertisingService(serviceUUID)) {
-      Serial.println(" <- ✓ ESTE É O NOSSO DISPOSITIVO!");
+      Serial.println(" <-ESTE É O NOSSO DISPOSITIVO!");
       BLEDevice::getScan()->stop();
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
@@ -257,8 +278,8 @@ void setup() {
   BLEDevice::init("ESP32-WROOM32-Client");
   BLEDevice::setPower(ESP_PWR_LVL_P7);
   BLEDevice::setMTU(517);
-  Serial.println("✓ BLE inicializado");
-  Serial.println("✓ MTU configurado para 517");
+  Serial.println("BLE inicializado");
+  Serial.println("MTU configurado para 517");
 
   // Configura o scanner BLE
   BLEScan* pBLEScan = BLEDevice::getScan();
@@ -266,7 +287,7 @@ void setup() {
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  Serial.println("✓ Scanner BLE configurado");
+  Serial.println("Scanner BLE configurado");
 
   // Configura os servos
   Servo1.attach(2);
@@ -277,9 +298,9 @@ void setup() {
   Servo6.attach(33);
 
 
-  Serial.println("✓ Servos configurados (Pinos 2 e 4)");
+  Serial.println(" Servos configurados ");
   
-  Serial.println("\n✓✓✓ Setup completo! ✓✓✓");
+  Serial.println(" Setup completo! ");
   Serial.println("Iniciando busca pelo ESP32-C3...\n");
 }
 
@@ -287,7 +308,7 @@ void setup() {
 // LOOP PRINCIPAL
 // ============================================
 void loop() {
-  // Se desconectar, tenta conectar
+  // Se deve conectar, tenta conectar
   if (doConnect == true) {
     if (connectToServer()) {
       Serial.println("✓ Sucesso na conexão ao servidor BLE!");
@@ -338,9 +359,12 @@ else if (receivedRoll < -20) {
     rollatual = rollatual - 2;
 }
 
+
 // Escreve a nova posição nos Servos 1 e 2
 Servo3.write(rollatual);
 Servo2.write(rollatual);
+
+
 
 // Aumenta Gradualmente 'pitchatual'
 if (receivedPitch > 20) {
@@ -354,13 +378,15 @@ else if (receivedPitch < -20) {
 
 // Escreve a nova posição no Servo 3
 Servo1.write(pitchatual);    
-//-----------------------------------------------------------------------------------------------------------------
+
+
   if (receivedBotao1 == 1 && valorAnterior == 0) {
     // quando valorAtual vai para 1, inverte o estado de saida
     saida = 1 - saida;
   }
 
-  valorAnterior = receivedBotao1;
+  valorAnterior = receivedBotao1
+  ;
 
   // use a variável saida como necessário
   Serial.println(saida);
@@ -373,12 +399,13 @@ Servo1.write(pitchatual);
     
     }
     
+    
     if (receivedBotao2 == 1) {
       Serial.println(">>> BOTÃO 2 PRESSIONADO! <<<");
     
     }
-    
+  
   delay(10);
   }
-  
+  movtchau();
 }
