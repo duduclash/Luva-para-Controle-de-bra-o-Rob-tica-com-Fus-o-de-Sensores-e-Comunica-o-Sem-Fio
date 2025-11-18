@@ -56,28 +56,6 @@ const int scanInterval = 5000;
 int ondas = 0;
 unsigned long tempo = 0;
 
-void movtchau()
-{
-
- if (abs(receivedAx) > 1.5) {
-    if (millis() - tempo < 500) {
-      ondas++;
-      if (ondas >= 2) {
-        Serial.println("TCHAU!");
-        ondas = 0;
-        delay(1000);
-      }
-    } else {
-      ondas = 1;
-    }
-    tempo = millis();
-    delay(200);
-  }
-
-
-
-
-}
 // ============================================
 // CALLBACK - RECEBE TODOS OS DADOS DE UMA VEZ (CORRIGIDO)
 // ============================================
@@ -407,5 +385,5 @@ Servo1.write(pitchatual);
   
   delay(10);
   }
-  movtchau();
+  
 }
