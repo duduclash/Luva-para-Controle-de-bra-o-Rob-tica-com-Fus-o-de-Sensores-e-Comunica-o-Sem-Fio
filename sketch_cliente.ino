@@ -9,6 +9,8 @@
 
   int pitchatual = 90;
   int rollatual = 90;
+  int valorAnterior = 0;  // valor anterior do valorAtual
+  int saida = 0;  // variável que deve se manter no 1 quando valorAtual vai para 1
 
 // ============================================
 // ESTRUTURA DE DADOS - REMOVIDA PARA USAR SERIALIZAÇÃO MANUAL
@@ -143,7 +145,7 @@ static void dataNotifyCallback(
   }
   
   // Se o tamanho não for 16 nem 14, reporta o erro de tamanho
-  Serial.print("❌ Tamanho incorreto! Esperado: 16 ou 14 | Recebido: ");
+  Serial.print(" Tamanho incorreto! Esperado: 16 ou 14 | Recebido: ");
   Serial.println(length);
 }
 
@@ -191,7 +193,7 @@ bool connectToServer() {
 
   BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
   if (pRemoteService == nullptr) {
-    Serial.println("❌ Serviço não encontrado!");
+    Serial.println(" Serviço não encontrado!");
     Serial.print("UUID procurado: ");
     Serial.println(serviceUUID.toString().c_str());
     pClient->disconnect();
@@ -204,7 +206,7 @@ bool connectToServer() {
   // Busca a característica única de dados
   pDataRemoteCharacteristic = pRemoteService->getCharacteristic(dataCharUUID);
   if (pDataRemoteCharacteristic == nullptr) {
-    Serial.println("❌ Característica não encontrada!");
+    Serial.println(" Característica não encontrada!");
     Serial.print("UUID procurado: ");
     Serial.println(dataCharUUID.toString().c_str());
     pClient->disconnect();
@@ -219,7 +221,7 @@ bool connectToServer() {
     pDataRemoteCharacteristic->registerForNotify(dataNotifyCallback);
     Serial.println("✓ Notificação configurada com sucesso!");
   } else {
-    Serial.println("❌ Característica não pode notificar!");
+    Serial.println(" Característica não pode notificar!");
     pClient->disconnect();
     return false;
   }
@@ -233,7 +235,7 @@ bool connectToServer() {
 }
 
 // ============================================
-// CALLBACK DE BUSCA DE DISPOSITIVOS
+// BUSCA DE DISPOSITIVOS
 // ============================================
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -308,7 +310,7 @@ void setup() {
 // LOOP PRINCIPAL
 // ============================================
 void loop() {
-  // Se deve conectar, tenta conectar
+  // Se desconectar, tenta conectar
   if (doConnect == true) {
     if (connectToServer()) {
       Serial.println("✓ Sucesso na conexão ao servidor BLE!");
@@ -330,7 +332,7 @@ void loop() {
 
   // Verifica se a conexão foi perdida
   if (connected && pClient != nullptr && !pClient->isConnected()) {
-    Serial.println("\n⚠️ Conexão perdida detectada!");
+    Serial.println("\n Conexão perdida detectada!");
     connected = false;
   }
 
@@ -343,25 +345,25 @@ void loop() {
     // Limita os valores entre 0 e 180
     valorroll = constrain(valorroll, 0, 180);
     valorpitch = constrain(valorpitch, 0, 180);
+
+    rollatual = constrain(rollatual,0,360);
+    pitchatual= constrain(pitchatual,0,360);
     
     // Atualiza os servos
 if (receivedRoll > 20) {
     // Incrementa o valor (pode mudar o '1' para ajustar a velocidade)
-    rollatual = rollatual + 1; 
+    rollatual = rollatual + 2; 
 }
 
 // Diminui Gradualmente 'rollatual' se 'receivedRoll' for baixo
 else if (receivedRoll < -20) {
     // Decrementa o valor
-    rollatual = rollatual - 1;
+    rollatual = rollatual - 2;
 }
 
-// Limitar o valor de 'rollatual' (de 0 a 180 graus)
 // Escreve a nova posição nos Servos 1 e 2
-Servo1.write(rollatual);
+Servo3.write(rollatual);
 Servo2.write(rollatual);
-
-// --- Lógica para Pitch ---
 
 // Aumenta Gradualmente 'pitchatual'
 if (receivedPitch > 20) {
@@ -374,24 +376,34 @@ else if (receivedPitch < -20) {
 }
 
 // Escreve a nova posição no Servo 3
-Servo3.write(pitchatual);
-    
-    // ========== EXEMPLOS DE USO DOS BOTÕES ==========
-    
-    // Botão 1 - Exemplo: imprime no serial quando pressionado
-    if (receivedBotao1 == 1) {
-      Serial.println(">>> BOTÃO 1 PRESSIONADO! <<<");
-      // Adicione aqui o que você quer fazer com o botão 1
-    }
-    
-    // Botão 2 - Exemplo: imprime no serial quando pressionado
-    if (receivedBotao2 == 1) {
-      Serial.println(">>> BOTÃO 2 PRESSIONADO! <<<");
-      // Adicione aqui o que você quer fazer com o botão 2
-    }
+Servo1.write(pitchatual);    
+//-----------------------------------------------------------------------------------------------------------------
+  if (receivedBotao1 == 1 && valorAnterior == 0) {
+    // quando valorAtual vai para 1, inverte o estado de saida
+    saida = 1 - saida;
   }
 
+  valorAnterior = receivedBotao1
+  ;
+
+  // use a variável saida como necessário
+  Serial.println(saida);
+
+
+  // use a variável saida como necessário
+   
+    if (receivedBotao1 == 1) {
+      Serial.println(">>> BOTÃO 1 PRESSIONADO! <<<");
+    
+    }
+    
+    
+    if (receivedBotao2 == 1) {
+      Serial.println(">>> BOTÃO 2 PRESSIONADO! <<<");
+    
+    }
+    
+  delay(10);
+  }
   movtchau();
-  // Delay mínimo - mantém alta taxa de atualização (~100Hz)
-  delay(5);
 }
