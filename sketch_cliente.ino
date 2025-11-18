@@ -1,5 +1,3 @@
-
-
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
@@ -59,7 +57,6 @@ int ondas = 0;
 unsigned long tempo = 0;
 
 
-}
 // ============================================
 // CALLBACK - RECEBE TODOS OS DADOS DE UMA VEZ (CORRIGIDO)
 // ============================================
@@ -363,8 +360,7 @@ Servo1.write(pitchatual);
     saida = 1 - saida;
   }
 
-  valorAnterior = receivedBotao1
-  ;
+  valorAnterior = receivedBotao1;
 
   // use a variável saida como necessário
   Serial.println(saida);
@@ -376,7 +372,6 @@ Servo1.write(pitchatual);
       Serial.println(">>> BOTÃO 1 PRESSIONADO! <<<");
     
     }
-    
     
     if (receivedBotao2 == 1) {
       Serial.println(">>> BOTÃO 2 PRESSIONADO! <<<");
