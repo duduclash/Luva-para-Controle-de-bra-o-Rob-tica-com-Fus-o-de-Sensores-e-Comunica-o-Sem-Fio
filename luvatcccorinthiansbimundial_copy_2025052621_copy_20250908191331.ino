@@ -164,7 +164,7 @@ void setup() {
   while (!deviceConnected) {
     delay(100);
     battery();  // Atualiza a leitura da tensão da bateria
-    if (tensaobatt >= 4.10 && bolo == 0) {
+    if (tensaobatt >= 4.10 && dev == 0) {
       break;  // Se estiver carregando sai do loop de espera do Bluetooth
     }
   }
