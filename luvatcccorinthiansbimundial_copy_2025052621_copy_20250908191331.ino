@@ -1,4 +1,4 @@
-int bolo = 1;  // quando for 0 o codigo ativa o modo carregamento no usb se for 1 desativo esse modo
+int dev = 1;  // quando for 0 o codigo ativa o modo carregamento no usb se for 1 desativo esse modo
 //O CALCULO DA BATERIA TEM UM ERRO DE ATE 5%!!!!!!
 //sempre conactar a merda do pino SAO no GND para definir o endereço para 0X6A se deixar sem vai ficar oscilando entre o A e B
 //calibraçao +- 20 segundos
@@ -199,7 +199,7 @@ void setup() {
 void loop() {
   battery();
 
-  if (tensaobatt >= 4.10 && bolo == 0) {
+  if (tensaobatt >= 4.10 && dev == 0) {
     display.clearDisplay();
     display.setTextColor(1);
     display.setTextWrap(false);
