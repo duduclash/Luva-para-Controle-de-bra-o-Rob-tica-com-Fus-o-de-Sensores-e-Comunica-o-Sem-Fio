@@ -19,6 +19,7 @@ static const unsigned char PROGMEM image_battery_charger_connected_bits[] = { 0x
 //declarando variaveis
 
 int indice_bateria = 0;
+int lastDisplayTime = 0;
 const int N_LEITURAS = 50;  // <- Mexer aqui para mudar o número de médias
 int percentagemOld[N_LEITURAS] = { 0 };
 const float R1 = 99.1;
@@ -335,5 +336,10 @@ void loop() {
     // Layer 9
     display.drawBitmap(114, 0, image_Layer_9_bits, 14, 43, 1);
     display.display();
+  if (millis() - lastDisplayTime > 50) 
+    {
+        display.display();
+        lastDisplayTime = millis();
+    }
   }
 }
