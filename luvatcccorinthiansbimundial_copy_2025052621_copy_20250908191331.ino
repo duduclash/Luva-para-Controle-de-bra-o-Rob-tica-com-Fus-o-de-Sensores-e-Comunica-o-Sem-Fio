@@ -126,9 +126,8 @@ float smooth(float old[], float novo) {
 void fixsensor() {
   calibracaodisplay();
 
-  // --- BARRA DE PROGRESSO (Ajustada) ---
-  // Caixa (Borda):
-  // X=10 (Centralizado), Y=56 (Mais para cima), Largura=108, Altura=4
+  // --- BARRA DE PROGRESSO
+ 
   display.drawRect(10, 56, 108, 4, 1);
   display.display();
 
@@ -148,22 +147,15 @@ void fixsensor() {
     delay(2);
 
     if (n % 100 == 0) {
-      // CORREÇÃO MATEMÁTICA:
-      // Mapeia até 4999 (último valor do loop) para 106 (largura interna total)
-      // Assim, quando n for 4999, a barra terá largura 106 (100% cheia)
+      
       int larguraBarra = map(n, 0, 4999, 0, 106);
-
-      // Preenchimento:
-      // X=11 (Logo depois da borda 10), Y=57 (Dentro da borda 56)
-      // Altura=2 (Para caber dentro da borda de altura 4)
       display.fillRect(11, 57, larguraBarra, 2, 1);
 
       display.display();
     }
   }
 
-  // GARANTIA FINAL: Desenha a barra 100% cheia quando acabar o loop
-  // Pra garantir que não falte nenhum pixel visualmente
+ 
   display.fillRect(11, 57, 106, 2, 1);
   display.display();
 
