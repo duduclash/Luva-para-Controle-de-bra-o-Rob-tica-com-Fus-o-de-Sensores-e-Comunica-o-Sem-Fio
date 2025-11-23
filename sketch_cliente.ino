@@ -3,61 +3,82 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 #include <ESP32Servo.h>
-#include <string.h> //para a função memcpy
-
-  int pitchatual = 90;
-  int rollatual = 90;
-  int valorAnterior = 0;  // valor anterior do valorAtual
-  int saida = 0;  // variável que deve se manter no 1 quando valorAtual vai para 1
+#include <string.h> 
 
 // ============================================
-// ESTRUTURA DE DADOS - REMOVIDA PARA USAR SERIALIZAÇÃO MANUAL
+// DEFINIÇÕES E PINAGEM (Confira seus pinos!)
 // ============================================
+#define PIN_BASE      2   // Antigo Servo1
+#define PIN_OMBRO     4   // Antigo Servo2
+#define PIN_COTOVELO  26  // Antigo Servo3
+#define PIN_PUNHO_R   25  // Antigo Servo4
+#define PIN_PUNHO_P   33  // Antigo Servo5
+#define PIN_GARRA     32  // Antigo Servo6
 
 // ============================================
-// VARIÁVEIS GLOBAIS
+// OBJETOS SERVOS
 // ============================================
-int valorpitch = 0;
-int valorroll = 0;
-Servo Servo1;
-Servo Servo2;
-Servo Servo3;
-Servo Servo4;
-Servo Servo5;
-Servo Servo6;
+Servo servoBase;
+Servo servoOmbro;
+Servo servoCotovelo;
+Servo servoPunhoRoll;
+Servo servoPunhoPitch;
+Servo servoGarra;
 
-// UUIDs - Devem ser iguais ao servidor
+// ============================================
+// VARIÁVEIS DE POSIÇÃO (Iniciam em 90 para segurança)
+// ============================================
+int posBase = 90;
+int posOmbro = 90;      // Antigo rollatual
+int posCotovelo = 90;   // Antigo rollatual2
+int posPunhoRoll = 90;  // Antigo garraroll
+int posPunhoPitch = 90; // Antigo garrapitch
+
+// Variáveis "Anteriores" para evitar escrita excessiva (Anti-Jitter)
+int lastBase = -1;
+int lastOmbro = -1;
+int lastCotovelo = -1;
+int lastPunhoRoll = -1;
+int lastPunhoPitch = -1;
+int lastGarraEstado = -1;
+
+// Configurações de movimento
+int step = 2;       // Velocidade do movimento (aumente para ir mais rápido)
+int deadzone = 20;  // Zona morta do sensor (ignora inclinações pequenas)
+
+// ============================================
+// VARIÁVEIS DE ESTADO
+// ============================================
+int modoControle = 0; // 0 = Braço, 1 = Punho (Antigo 'saida')
+int estadoGarra = 0;  // 0 = Fechada, 1 = Aberta (Antigo 'saida2')
+
+// Variáveis para detecção de borda (botões)
+int btn1_anterior = 0;
+int btn2_anterior = 0;
+
+// ============================================
+// BLE - VARIÁVEIS GLOBAIS
+// ============================================
 static BLEUUID serviceUUID("12345678-1234-1234-1234-123456789abc");
 static BLEUUID dataCharUUID("abcd1234-5678-90ab-cdef-123456789abc");
 
 static boolean doConnect = false;
 static boolean connected = false;
-
-// Ponteiro BLE
 static BLERemoteCharacteristic* pDataRemoteCharacteristic;
-static BLEAdvertisedDevice* myDevice;
+static BLEAdvertisedDevice* myDevice; 
 static BLEClient* pClient = nullptr;
 
-// Variáveis para armazenar os dados recebidos
-int receivedRoll = 0;
-int receivedPitch = 0;
-float receivedAx = 0.00;
-float receivedAy = 0.00;
-float receivedAz = 0.00;
-float receivedGx = 0.00;
-float receivedGy = 0.00;
-float receivedGz = 0.00;
-uint8_t receivedBotao1 = 0;
-uint8_t receivedBotao2 = 0;
+// Dados recebidos
+int16_t rxRoll = 0;
+int16_t rxPitch = 0;
+uint8_t rxBtn1 = 0;
+uint8_t rxBtn2 = 0;
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 5000;
 
-int ondas = 0;
-unsigned long tempo = 0;
-
 // ============================================
-// CALLBACK - RECEBE TODOS OS DADOS DE UMA VEZ (CORRIGIDO)
+// CALLBACK DE DADOS (RECEBE DO SERVIDOR)
 // ============================================
 static void dataNotifyCallback(
   BLERemoteCharacteristic* pBLERemoteCharacteristic,
@@ -65,64 +86,18 @@ static void dataNotifyCallback(
   size_t length,
   bool isNotify) {
   
-  // Verifica se é o PACOTE 1 (Roll, Pitch, Acelerômetro)
+  // PACOTE 1: Roll, Pitch, Acelerômetro (16 bytes)
   if (length == 16) {
-    int offset = 0;
-
-    // 1. Roll (2 bytes - int16_t) - CORREÇÃO DE SINAL
-    int16_t tempRoll;
-    memcpy(&tempRoll, pData + offset, 2);
-    receivedRoll = tempRoll; // Atribuição de int16_t para int (32 bits) faz a extensão de sinal
-    offset += 2;
-    
-    // 2. Pitch (2 bytes - int16_t) - CORREÇÃO DE SINAL
-    int16_t tempPitch;
-    memcpy(&tempPitch, pData + offset, 2);
-    receivedPitch = tempPitch; // Atribuição de int16_t para int (32 bits) faz a extensão de sinal
-    offset += 2;
-    
-    // 3. Acelerômetro X, Y, Z (3 * 4 = 12 bytes)
-    memcpy(&receivedAx, pData + offset, 4);
-    offset += 4;
-    memcpy(&receivedAy, pData + offset, 4);
-    offset += 4;
-    memcpy(&receivedAz, pData + offset, 4);
-    offset += 4;
-    
-    // Agora, esperamos o PACOTE 2 para imprimir os dados completos
-    return;
+    memcpy(&rxRoll, pData, 2);      // Bytes 0-1
+    memcpy(&rxPitch, pData + 2, 2); // Bytes 2-3
+    // Ignorando Ax, Ay, Az por enquanto
   } 
-  
-  // Verifica se é o PACOTE 2 (Giroscópio e Botões)
+  // PACOTE 2: Giroscópio e Botões (14 bytes)
   else if (length == 14) {
-    int offset = 0;
-    
-    // 4. Giroscópio X, Y, Z (3 * 4 = 12 bytes)
-    memcpy(&receivedGx, pData + offset, 4);
-    offset += 4;
-    memcpy(&receivedGy, pData + offset, 4);
-    offset += 4;
-    memcpy(&receivedGz, pData + offset, 4);
-    offset += 4;
-    
-    // 5. Botão 1 (1 byte - uint8_t)
-    receivedBotao1 = pData[offset++];
-    
-    // 6. Botão 2 (1 byte - uint8_t)
-    receivedBotao2 = pData[offset++];
-
-    // Debug - mostra todos os dados recebidos (somente após o segundo pacote)
-    Serial.printf("Roll:%d Pitch:%d | Ax:%.2f Ay:%.2f Az:%.2f | Gx:%.2f Gy:%.2f Gz:%.2f | B1:%d B2:%d\n",
-                  receivedRoll, receivedPitch, 
-                  receivedAx, receivedAy, receivedAz,
-                  receivedGx, receivedGy, receivedGz,
-                  receivedBotao1, receivedBotao2);
-    return;
+    // Ignorando Gx, Gy, Gz (12 bytes)
+    rxBtn1 = pData[12]; // Byte 12
+    rxBtn2 = pData[13]; // Byte 13
   }
-  
-  // Se o tamanho não for 16 nem 14, reporta o erro de tamanho
-  Serial.print(" Tamanho incorreto! Esperado: 16 ou 14 | Recebido: ");
-  Serial.println(length);
 }
 
 // ============================================
@@ -130,112 +105,68 @@ static void dataNotifyCallback(
 // ============================================
 class MyClientCallback : public BLEClientCallbacks {
   void onConnect(BLEClient* pclient) {
-    Serial.println("\n✓✓✓ CONECTADO AO ESP32-C3! ✓✓✓");
+    Serial.println(">>> CONECTADO! <<<");
     connected = true;
   }
-
   void onDisconnect(BLEClient* pclient) {
     connected = false;
-    Serial.println("\n✗✗✗ DESCONECTADO DO ESP32-C3 ✗✗✗");
-    Serial.println("Reiniciando busca...\n");
+    Serial.println(">>> DESCONECTADO! <<<");
   }
 };
 
 // ============================================
-// FUNÇÃO DE CONEXÃO AO SERVIDOR
+// CONECTAR AO SERVIDOR
 // ============================================
 bool connectToServer() {
-  Serial.println("\n========================================");
-  Serial.print("Tentando conectar ao ESP32-C3: ");
+  Serial.print("Conectando a: ");
   Serial.println(myDevice->getAddress().toString().c_str());
-  Serial.println("========================================");
 
   if (pClient == nullptr) {
     pClient = BLEDevice::createClient();
-    Serial.println(" Cliente BLE criado");
   }
-
   pClient->setClientCallbacks(new MyClientCallback());
 
-  Serial.println("Iniciando conexão física...");
-  if (!pClient->connect(myDevice)) {
-    Serial.println("Falha na conexão inicial");
-    return false;
-  }
-
-  Serial.println("✓ Conexão física estabelecida");
-  Serial.println("Procurando serviço...");
-  delay(1000);
+  if (!pClient->connect(myDevice)) return false;
 
   BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
   if (pRemoteService == nullptr) {
-    Serial.println(" Serviço não encontrado!");
-    Serial.print("UUID procurado: ");
-    Serial.println(serviceUUID.toString().c_str());
     pClient->disconnect();
     return false;
   }
 
-  Serial.println("✓ Serviço encontrado!");
-  Serial.println("Procurando característica de dados...");
-
-  // Busca a característica única de dados
   pDataRemoteCharacteristic = pRemoteService->getCharacteristic(dataCharUUID);
   if (pDataRemoteCharacteristic == nullptr) {
-    Serial.println(" Característica não encontrada!");
-    Serial.print("UUID procurado: ");
-    Serial.println(dataCharUUID.toString().c_str());
     pClient->disconnect();
     return false;
   }
 
-  Serial.println("✓ Característica encontrada!");
-  Serial.println("Configurando notificações...");
-
-  // Registra para receber notificações
   if (pDataRemoteCharacteristic->canNotify()) {
     pDataRemoteCharacteristic->registerForNotify(dataNotifyCallback);
-    Serial.println("✓ Notificação configurada com sucesso!");
-  } else {
-    Serial.println(" Característica não pode notificar!");
-    pClient->disconnect();
-    return false;
   }
 
-  connected = true;
-  Serial.println("\n========================================");
-  Serial.println("===== CONECTADO COM SUCESSO! =====");
-  Serial.println("===== RECEBENDO DADOS... =====");
-  Serial.println("========================================\n");
   return true;
 }
 
 // ============================================
-// CALLBACK DE BUSCA DE DISPOSITIVOS
+// BUSCA DE DISPOSITIVOS (SCAN)
 // ============================================
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
-    Serial.print("BLE encontrado: ");
-    Serial.print(advertisedDevice.toString().c_str());
+    // Verifica se é o nosso dispositivo pelo UUID ou Nome
+    if (advertisedDevice.isAdvertisingService(serviceUUID) || 
+        advertisedDevice.getName() == "ESP32-C3-SENSOR") {
+            
+      Serial.println("Dispositivo Encontrado!");
+      BLEDevice::getScan()->stop();
 
-    // Verifica se é o nosso dispositivo pelo UUID do serviço
-    if (advertisedDevice.haveServiceUUID() && 
-        advertisedDevice.isAdvertisingService(serviceUUID)) {
-      Serial.println(" <-ESTE É O NOSSO DISPOSITIVO!");
-      BLEDevice::getScan()->stop();
+      // CORREÇÃO DE MEMÓRIA: Deleta o antigo antes de criar novo
+      if (myDevice != nullptr) {
+        delete myDevice;
+        myDevice = nullptr;
+      }
+      
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
-    } 
-    // Ou verifica pelo nome
-    else if (advertisedDevice.haveName() && 
-             advertisedDevice.getName() == "ESP32-C3-SENSOR") {
-      Serial.println(" <- ✓ ESTE É O NOSSO DISPOSITIVO!");
-      BLEDevice::getScan()->stop();
-      myDevice = new BLEAdvertisedDevice(advertisedDevice);
-      doConnect = true;
-    } 
-    else {
-      Serial.println(" (não é o que procuramos)");
     }
   }
 };
@@ -245,145 +176,131 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 // ============================================
 void setup() {
   Serial.begin(115200);
-  delay(2000);
+  Serial.println("Iniciando Braço Robótico ESP32 Client...");
 
-  Serial.println("\n\n========================================");
-  Serial.println("  ESP32-WROOM-32 BLE Client");
-  Serial.println("  Versão Otimizada - Baixa Latência");
-  Serial.println("========================================");
-
-  // Inicializa BLE
-  BLEDevice::init("ESP32-WROOM32-Client");
-  BLEDevice::setPower(ESP_PWR_LVL_P7);
-  BLEDevice::setMTU(517);
-  Serial.println("BLE inicializado");
-  Serial.println("MTU configurado para 517");
-
-  // Configura o scanner BLE
+  BLEDevice::init("ESP32-Arm-Client");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setInterval(1349);
-  pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  Serial.println("Scanner BLE configurado");
+  pBLEScan->setInterval(100);
+  pBLEScan->setWindow(99);
 
-  // Configura os servos
-  Servo1.attach(2);
-  Servo2.attach(4);
-  Servo3.attach(25);
-  Servo4.attach(27);
-  Servo5.attach(32);
-  Servo6.attach(33);
+  // Configura Servos
+  servoBase.attach(PIN_BASE);
+  servoOmbro.attach(PIN_OMBRO);
+  servoCotovelo.attach(PIN_COTOVELO);
+  servoPunhoRoll.attach(PIN_PUNHO_R);
+  servoPunhoPitch.attach(PIN_PUNHO_P);
+  servoGarra.attach(PIN_GARRA);
 
-
-  Serial.println(" Servos configurados ");
-  
-  Serial.println(" Setup completo! ");
-  Serial.println("Iniciando busca pelo ESP32-C3...\n");
+  // Posição Inicial (para evitar pulos bruscos ao ligar)
+  servoBase.write(posBase);
+  servoOmbro.write(posOmbro);
+  servoCotovelo.write(posCotovelo);
+  servoPunhoRoll.write(posPunhoRoll);
+  servoPunhoPitch.write(posPunhoPitch);
+  servoGarra.write(0);
 }
 
 // ============================================
 // LOOP PRINCIPAL
 // ============================================
 void loop() {
-  // Se deve conectar, tenta conectar
-  if (doConnect == true) {
+  // 1. Gerenciamento de Conexão
+  if (doConnect) {
     if (connectToServer()) {
-      Serial.println("✓ Sucesso na conexão ao servidor BLE!");
-      lastScanTime = millis();
+      Serial.println("Conexão estabelecida.");
     } else {
-      Serial.println("✗ Falha na conexão ao servidor BLE.");
+      Serial.println("Falha na conexão.");
     }
     doConnect = false;
   }
 
-  // Se não está conectado, procura o dispositivo periodicamente
   if (!connected) {
     if (millis() - lastScanTime > scanInterval) {
-      Serial.println("\n--- Procurando pelo ESP32-C3-SENSOR... ---");
+      Serial.println("Escaneando...");
       BLEDevice::getScan()->start(5, false);
       lastScanTime = millis();
     }
+    return; // Se não conectado, não faz nada abaixo
   }
 
-  // Verifica se a conexão foi perdida
-  if (connected && pClient != nullptr && !pClient->isConnected()) {
-    Serial.println("\n Conexão perdida detectada!");
-    connected = false;
+  // 2. Leitura dos Botões (Toggle)
+  if (rxBtn1 == 1 && btn1_anterior == 0) {
+    modoControle = !modoControle; // Alterna 0 <-> 1
+    Serial.print("Modo alterado para: "); Serial.println(modoControle ? "PUNHO" : "BRAÇO");
   }
+  btn1_anterior = rxBtn1;
 
-  // ========== CONTROLE DOS SERVOS ==========
-  if (connected) {
-    // Mapeia os valores de roll e pitch para os servos
-    valorroll = map(receivedRoll, -90, 90, 0, 180);
-    valorpitch = map(receivedPitch, -90, 90, 0, 180);
-    
-    // Limita os valores entre 0 e 180
-    valorroll = constrain(valorroll, 0, 180);
-    valorpitch = constrain(valorpitch, 0, 180);
-
-    rollatual = constrain(rollatual,0,360);
-    pitchatual= constrain(pitchatual,0,360);
-    
-    // Atualiza os servos
-if (receivedRoll > 20) {
-    // Incrementa o valor (pode mudar o '1' para ajustar a velocidade)
-    rollatual = rollatual + 2; 
-}
-
-// Diminui Gradualmente 'rollatual' se 'receivedRoll' for baixo
-else if (receivedRoll < -20) {
-    // Decrementa o valor
-    rollatual = rollatual - 2;
-}
-
-
-// Escreve a nova posição nos Servos 1 e 2
-Servo3.write(rollatual);
-Servo2.write(rollatual);
-
-
-
-// Aumenta Gradualmente 'pitchatual'
-if (receivedPitch > 20) {
-    pitchatual = pitchatual + 2;
-}
-
-// Diminui Gradualmente 'pitchatual'
-else if (receivedPitch < -20) {
-    pitchatual = pitchatual - 2;
-}
-
-// Escreve a nova posição no Servo 3
-Servo1.write(pitchatual);    
-
-
-  if (receivedBotao1 == 1 && valorAnterior == 0) {
-    // quando valorAtual vai para 1, inverte o estado de saida
-    saida = 1 - saida;
+  if (rxBtn2 == 1 && btn2_anterior == 0) {
+    estadoGarra = !estadoGarra; // Alterna 0 <-> 1
+    Serial.print("Garra: "); Serial.println(estadoGarra ? "ABERTA" : "FECHADA");
   }
+  btn2_anterior = rxBtn2;
 
-  valorAnterior = receivedBotao1
-  ;
-
-  // use a variável saida como necessário
-  Serial.println(saida);
-
-
-  // use a variável saida como necessário
-   
-    if (receivedBotao1 == 1) {
-      Serial.println(">>> BOTÃO 1 PRESSIONADO! <<<");
-    
-    }
-    
-    
-    if (receivedBotao2 == 1) {
-      Serial.println(">>> BOTÃO 2 PRESSIONADO! <<<");
-    
-    }
+  // 3. Lógica de Movimento
   
-  delay(10);
-  }
+  // --- MODO 0: BRAÇO (Base, Ombro, Cotovelo) ---
+  if (modoControle == 0) {
+    
+    // CONTROLE DA BASE (Roll do sensor)
+    if (rxRoll > deadzone) posBase += step;
+    else if (rxRoll < -deadzone) posBase -= step;
+
+    // CONTROLE DE ELEVAÇÃO (Pitch do sensor) - LÓGICA FLUIDA
+    
+    // >>>> MOVIMENTO PARA FRENTE (Esticar) <<<<
+    if (rxPitch > deadzone) {
+        // Sobe o ombro
+        if (posOmbro < 180) posOmbro += step;
+
+        // Se o ombro já subiu um pouco (> 60), o cotovelo começa a estender junto
+        // Isso cria o efeito cascata SUAVE
+        if (posOmbro > 60 && posCotovelo > 0) {
+            posCotovelo -= step; 
+        }
+    }
+    // >>>> MOVIMENTO PARA TRÁS (Recolher) <<<<
+    else if (rxPitch < -deadzone) {
+        // Recolhe o cotovelo primeiro/junto
+        if (posCotovelo < 180) posCotovelo += step;
+
+        // O ombro só desce se o cotovelo já recolheu um pouco (evita bater na mesa)
+        if (posCotovelo > 45 && posOmbro > 0) {
+            posOmbro -= step;
+        }
+    }
+  } 
   
+  // --- MODO 1: PUNHO ---
+  else {
+    if (rxPitch > deadzone) posPunhoRoll += step;
+    else if (rxPitch < -deadzone) posPunhoRoll -= step;
+
+    if (rxRoll > deadzone) posPunhoPitch += step;
+    else if (rxRoll < -deadzone) posPunhoPitch -= step;
+  }
+
+  // 4. Limitação de Segurança (Constrain)
+  posBase = constrain(posBase, 0, 180);
+  posOmbro = constrain(posOmbro, 0, 180);
+  posCotovelo = constrain(posCotovelo, 0, 180);
+  posPunhoRoll = constrain(posPunhoRoll, 0, 180);
+  posPunhoPitch = constrain(posPunhoPitch, 0, 180);
+
+  // 5. Atualização dos Servos (Apenas se mudou o valor)
+  if (posBase != lastBase) { servoBase.write(posBase); lastBase = posBase; }
+  if (posOmbro != lastOmbro) { servoOmbro.write(posOmbro); lastOmbro = posOmbro; }
+  if (posCotovelo != lastCotovelo) { servoCotovelo.write(posCotovelo); lastCotovelo = posCotovelo; }
+  if (posPunhoRoll != lastPunhoRoll) { servoPunhoRoll.write(posPunhoRoll); lastPunhoRoll = posPunhoRoll; }
+  if (posPunhoPitch != lastPunhoPitch) { servoPunhoPitch.write(posPunhoPitch); lastPunhoPitch = posPunhoPitch; }
+  
+  // Garra
+  int posGarraAlvo = (estadoGarra == 1) ? 180 : 0; // 180 = Aberta, 0 = Fechada (ajuste conforme sua garra)
+  if (posGarraAlvo != lastGarraEstado) {
+      servoGarra.write(posGarraAlvo);
+      lastGarraEstado = posGarraAlvo;
+  }
+
+  delay(10); // Pequeno delay para estabilidade do loop
 }
