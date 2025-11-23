@@ -63,17 +63,17 @@ void BLE(float ax, float ay, float az, float gx, float gy, float gz) {
   // --- PACOTE 1: Roll, Pitch, Acelerômetro (16 bytes) ---
   uint8_t packet1[16];
   int offset = 0;
-  
+
   // Roll (int16_t = 2 bytes)
   int16_t roll_val = (int16_t)roll2;
   memcpy(packet1 + offset, &roll_val, 2);
   offset += 2;
-  
+
   // Pitch (int16_t = 2 bytes)
   int16_t pitch_val = (int16_t)pitch2;
   memcpy(packet1 + offset, &pitch_val, 2);
   offset += 2;
-  
+
   // Acelerômetro X, Y, Z (3 * 4 = 12 bytes)
   memcpy(packet1 + offset, &ax, 4);
   offset += 4;
@@ -81,14 +81,14 @@ void BLE(float ax, float ay, float az, float gx, float gy, float gz) {
   offset += 4;
   memcpy(packet1 + offset, &az, 4);
   offset += 4;
-  
+
   pCharacteristic->setValue(packet1, 16);
   pCharacteristic->notify();
 
   // --- PACOTE 2: Giroscópio e Botões (14 bytes) ---
   uint8_t packet2[14];
   offset = 0;
-  
+
   // Giroscópio X, Y, Z (3 * 4 = 12 bytes)
   memcpy(packet2 + offset, &gx, 4);
   offset += 4;
@@ -96,10 +96,10 @@ void BLE(float ax, float ay, float az, float gx, float gy, float gz) {
   offset += 4;
   memcpy(packet2 + offset, &gz, 4);
   offset += 4;
-  
+
   // Botão 1 (1 byte)
   packet2[offset++] = btn1;
-  
+
   // Botão 2 (1 byte)
   packet2[offset++] = btn2;
 
@@ -216,4 +216,25 @@ int battery() {
   int mediaFinal = soma / N_LEITURAS;
 
   return mediaFinal;  // <-- Devolve o valor calculado e suavizado
+}
+
+
+
+void esperar() {
+  display.clearDisplay();
+  display.drawBitmap(52, 5, image_hand_pointer_bits, 24, 32, 1);
+
+  display.setTextColor(1);
+  display.setTextWrap(false);
+  display.setCursor(20, 40);
+  display.print("aperte qualquer");
+
+  display.setCursor(11, 51);
+  display.print("botao para iniciar");
+
+  display.display();
+
+  while (digitalRead(BOTAO1_PIN) == HIGH && digitalRead(BOTAO2_PIN) == HIGH) {
+    delay(50);  // Pequeno delay para não fritar a CPU à toa
+  }
 }
