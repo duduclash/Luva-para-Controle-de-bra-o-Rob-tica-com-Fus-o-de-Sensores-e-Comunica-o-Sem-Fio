@@ -236,5 +236,9 @@ void esperar() {
 
   while (digitalRead(BOTAO1_PIN) == HIGH && digitalRead(BOTAO2_PIN) == HIGH) {
     delay(50);  // Pequeno delay para não fritar a CPU à toa
+   if (charging == HIGH && !Serial) {
+      break;  // Se estiver carregando sai do loop de espera do Bluetooth
+    }
+  
   }
 }
