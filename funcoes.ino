@@ -222,23 +222,25 @@ int battery() {
 
 void esperar() {
   display.clearDisplay();
-  display.drawBitmap(52, 5, image_hand_pointer_bits, 24, 32, 1);
+  display.drawBitmap(52, 5, image_hand_pointer_bits, 24, 32, 1); //
 
   display.setTextColor(1);
   display.setTextWrap(false);
   display.setCursor(20, 40);
-  display.print("aperte qualquer");
+  display.print("aperte qualquer"); //
 
   display.setCursor(11, 51);
   display.print("botao para iniciar");
 
   display.display();
 
-  while (digitalRead(BOTAO1_PIN) == HIGH && digitalRead(BOTAO2_PIN) == HIGH) {
-    delay(50);  // Pequeno delay para não fritar a CPU à toa
-   if (charging == HIGH && !Serial) {
-      break;  // Se estiver carregando sai do loop de espera do Bluetooth
+  // Loop que trava o código esperando o botão
+  while (digitalRead(BOTAO1_PIN) == HIGH && digitalRead(BOTAO2_PIN) == HIGH) { //
+    delay(50); 
+
+    
+    if (digitalRead(10) == HIGH && !Serial) { 
+       return; // Sai da função esperar() e volta para o setup()
     }
-  
   }
 }
