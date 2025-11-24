@@ -147,22 +147,15 @@ void fixsensor() {
     delay(2);
 
     if (n % 100 == 0) {
-      // CORREÇÃO MATEMÁTICA:
-      // Mapeia até 4999 (último valor do loop) para 106 (largura interna total)
-      // Assim, quando n for 4999, a barra terá largura 106 (100% cheia)
+      
       int larguraBarra = map(n, 0, 4999, 0, 106);
-
-      // Preenchimento:
-      // X=11 (Logo depois da borda 10), Y=57 (Dentro da borda 56)
-      // Altura=2 (Para caber dentro da borda de altura 4)
       display.fillRect(11, 57, larguraBarra, 2, 1);
 
       display.display();
     }
   }
 
-  // GARANTIA FINAL: Desenha a barra 100% cheia quando acabar o loop
-  // Pra garantir que não falte nenhum pixel visualmente
+
   display.fillRect(11, 57, 106, 2, 1);
   display.display();
 
@@ -178,63 +171,73 @@ void fixsensor() {
 }
 
 void setup() {
-  //iniciando comunicação
   sensor.begin();
   sensor.settings.accelRange = 4;
   display.begin(i2c_Address, true);
   Serial.begin(115200);
-  //definindo pinos
-  pinMode(10,INPUT);
-  pinMode(A0, INPUT);
+  
+  
+  pinMode(10, INPUT); // Pino do Carregador (Divisor de Tensão)
+  pinMode(A0, INPUT); // Leitura da Bateria
   pinMode(BOTAO1_PIN, INPUT_PULLUP);
   pinMode(BOTAO2_PIN, INPUT_PULLUP);
-  //aperte o botao para iniciar
-  esperar();
 
+  
+  if (digitalRead(10) == LOW || Serial) {
+     esperar();
+  }
 
-
-  //configurarLSM6DS3();
   BLESETUP();
-  //deviceConnected = true;  // tirar o // caso queira desativar a verificação do ble
-  connectble();
+  connectble(); //
+  
+  // Loop de espera do Bluetooth (com saída de emergência para carregador)
   while (!deviceConnected) {
     delay(100);
-    battery();  // Atualiza a leitura da tensão da bateria
-    if (charging == HIGH && !Serial) {
-      break;  // Se estiver carregando sai do loop de espera do Bluetooth
+    battery(); // Mantém a leitura da bateria atualizada
+
+    // SE CONECTAR O CABO PARA O LOOP
+    if (digitalRead(10) == HIGH && !Serial) { 
+      break; // Sai do while
     }
   }
 
-  if (deviceConnected) {
+  
+  if (deviceConnected && (digitalRead(10) == LOW || Serial)) {
     display.clearDisplay();
-    conectado();
+    conectado(); //
+    delay(2000); // Mostra a mensagem por 2 segundos
   }
 
-
-  delay(3500);
+ 
   display.clearDisplay();
-  Serial.begin(115200);
-  //configurarLSM6DS3();
-  // liga o sensor
-  if (sensor.begin() != 0)  // qualquer coisa diferente de zero = sensor não liga
-  {
+  Serial.begin(115200); //inicia a comunicaçao serial
+
+  
+  // Verifica o sensor
+  if (sensor.begin() != 0) { 
     exibirErroSensor();
-    Serial.println("Sensor LSM6DS3 não encontrado. Verifique a conexão.");
-    while (1);  // para o codigo
+    Serial.println("Sensor LSM6DS3 não encontrado."); //
+    while (1); // Trava se não achar o sensor
   }
   Serial.println("Sensor OK");
   display.display();
-  fixsensor();  // chama a função de correção dos valores
+
+ 
+  if (digitalRead(10) == LOW || Serial) { 
+    fixsensor(); 
+  }
+
   display.clearDisplay();
-  display.setTextColor(SH110X_WHITE);
+  display.setTextColor(SH110X_WHITE); //
 }  // fim do setup
 
 
 void loop() {
-  int charging = digitalRead(10);
+  
+  digitalRead(10);
   battery();
 
-  if (charging == HIGH && !Serial) {
+  if (digitalRead(10) == HIGH && !Serial) {
     display.clearDisplay();
     display.drawBitmap(40, 5, image_battery_charging_bits, 48, 32, 1);
     display.setTextColor(1);
@@ -242,16 +245,13 @@ void loop() {
     display.setCursor(35, 40);
     display.print("CARREGANDO");
     display.setCursor(59, 51);
-    display.print(tensaobatt);
+    display.print(String(tensaobatt) + "V");
     display.setCursor(69, 51);
     display.display();
 
 
 
   } else {
-
-
-
 
     veriqBLE();
     float tempC = sensor.readTempC();
