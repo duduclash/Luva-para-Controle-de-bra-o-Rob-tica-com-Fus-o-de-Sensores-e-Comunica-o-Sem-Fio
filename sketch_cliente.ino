@@ -302,5 +302,5 @@ void loop() {
       lastGarraEstado = posGarraAlvo;
   }
 
-  delay(10); // Pequeno delay para estabilidade do loop
+  delay(25); // Pequeno delay para estabilidade do loop
 }
