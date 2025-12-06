@@ -1,6 +1,6 @@
 # Luva para Controle de Braço Robótico com Fusão de Sensores e Comunicação Sem Fio
 
-[cite_start]Este repositório contém o código-fonte e a documentação do Trabalho de Conclusão de Curso (TCC) do curso Técnico em Eletrônica da ETEC Rubens de Faria e Souza [cite: 39-40]. O projeto consiste em uma luva sensorial capaz de captar movimentos inerciais e transmiti-los via Bluetooth Low Energy (BLE) para o controle em tempo real de um braço robótico impresso em 3D.
+Este repositório contém o código-fonte e a documentação do Trabalho de Conclusão de Curso (TCC) do curso Técnico em Eletrônica da ETEC Rubens de Faria e Souza. O projeto consiste em uma luva sensorial capaz de captar movimentos inerciais e transmiti-los via Bluetooth Low Energy (BLE) para o controle em tempo real de um braço robótico impresso em 3D.
 
 ## 📋 Resumo
 
@@ -9,7 +9,7 @@ O projeto aborda o desenvolvimento de um sistema de teleoperação acessível. U
 ### ✨ Principais Funcionalidades
 
 * **Comunicação Sem Fio (BLE):** Conexão estável e de baixo consumo entre a luva (Servidor) e o braço (Cliente).
-* [cite_start]**Fusão de Sensores:** Implementação de Filtro Complementar (Acelerômetro + Giroscópio) para eliminar ruídos e deriva [cite: 184-187].
+* **Fusão de Sensores:** Implementação de Filtro Complementar (Acelerômetro + Giroscópio) para eliminar ruídos e deriva [cite: 184-187].
 * **Interface Visual:** Display OLED na luva exibindo status da conexão, nível de bateria e ângulos (Roll/Pitch).
 * **Modos de Controle:** Alternância entre controle do *Braço* (Base/Ombro/Cotovelo) e *Punho/Garra* através de botões físicos.
 * **Segurança:** Limites de software para impedir movimentos que danifiquem a estrutura mecânica.
@@ -28,7 +28,7 @@ O projeto aborda o desenvolvimento de um sistema de teleoperação acessível. U
 * Servomotores: 3x **MG996R** (Base/Ombro) e 3x **SG90** (Punho/Garra)
 * Estrutura: Braço Robótico impresso em 3D.
     * **Modelo:** Robotic Arm 4.0
-    * [cite_start]**Créditos do Design:** [Fabri Creator](https://fabricreator.com)[cite: 111].
+    * **Créditos do Design:** [Fabri Creator](https://fabricreator.com).
 * Fonte de Alimentação: 5V.
 
 ## 📂 Estrutura do Código
