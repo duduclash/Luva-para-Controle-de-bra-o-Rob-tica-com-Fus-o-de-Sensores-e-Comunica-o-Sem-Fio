@@ -1,25 +1,88 @@
-# Luva-para-Controle-de-braço-Robotico-com-Fusao-de-Sensores-e-Comunicação-Sem-Fio
-TCC do curso Técnico em Eletrônica da ETEC Rubens de Faria e Souza, Sorocaba/SP. O projeto consiste em uma luva sensorial com ESP32-C3 que envia, via BLE, dados do sensor LSM6DS3 para outro ESP32 que controla servomotores, reproduzindo em uma braço robótico os movimentos realizados pela mão humana.
+# Luva para Controle de Braço Robótico com Fusão de Sensores e Comunicação Sem Fio
 
-Componentes utilizados:
+[cite_start]Este repositório contém o código-fonte e a documentação do Trabalho de Conclusão de Curso (TCC) do curso Técnico em Eletrônica da ETEC Rubens de Faria e Souza [cite: 39-40]. O projeto consiste em uma luva sensorial capaz de captar movimentos inerciais e transmiti-los via Bluetooth Low Energy (BLE) para o controle em tempo real de um braço robótico impresso em 3D.
 
-1 - xiao esp32 c3
+## 📋 Resumo
 
-1 - Esp32
+O projeto aborda o desenvolvimento de um sistema de teleoperação acessível. Utilizando um sensor inercial (LSM6DS3) integrado a um microcontrolador ESP32-C3 (na luva), os dados de aceleração e giroscópio são processados através de um **Filtro Complementar** para garantir estabilidade. Os dados tratados são enviados via BLE para um segundo ESP32 (no braço), que converte os sinais em movimentos precisos nos servomotores.
 
-1 - LSM6DS3
+### ✨ Principais Funcionalidades
 
-1 - bateria de 750mAh
+* **Comunicação Sem Fio (BLE):** Conexão estável e de baixo consumo entre a luva (Servidor) e o braço (Cliente).
+* [cite_start]**Fusão de Sensores:** Implementação de Filtro Complementar (Acelerômetro + Giroscópio) para eliminar ruídos e deriva [cite: 184-187].
+* **Interface Visual:** Display OLED na luva exibindo status da conexão, nível de bateria e ângulos (Roll/Pitch).
+* **Modos de Controle:** Alternância entre controle do *Braço* (Base/Ombro/Cotovelo) e *Punho/Garra* através de botões físicos.
+* **Segurança:** Limites de software para impedir movimentos que danifiquem a estrutura mecânica.
 
-1 - tela oled 128x64 1.3 Polegadas (sh1106)
+## 🛠️ Hardware Utilizado
 
-1 - fonte 5v 5A
+### Luva Transmissora
+* Microcontrolador: **Seeed Studio XIAO ESP32-C3**
+* Sensor Inercial: **LSM6DS3** (Acelerômetro e Giroscópio)
+* Display: **OLED 1.3" I2C (SH1106)**
+* Bateria: LiPo 3.7V 750mAh
+* Componentes extras: 2 Botões táteis, Chave HH, Resistores.
 
-2 - botoes 
+### Braço Receptor
+* Microcontrolador: **ESP32 DevKit V1** (ou similar)
+* Servomotores: 3x **MG996R** (Base/Ombro) e 3x **SG90** (Punho/Garra)
+* Estrutura: Braço Robótico impresso em 3D.
+    * **Modelo:** Robotic Arm 4.0
+    * [cite_start]**Créditos do Design:** [Fabri Creator](https://fabricreator.com)[cite: 111].
+* Fonte de Alimentação: 5V.
 
-2 - resistores 100kOhms
+## 📂 Estrutura do Código
 
-3 - servos motores sg90 180
+O projeto está dividido em dois módulos principais:
 
-3 - servos motores mg996r 180
+### 1. Luva (Transmissor)
+Responsável pela leitura dos sensores, filtro complementar e servidor BLE.
+* **Arquivo Principal:** `luvatcccorinthiansbimundial_copy_2025052621_copy_20250908191331.ino`
+* **Funções Auxiliares:** `funcoes.ino` (Contém lógica de leitura, display e configuração BLE)
 
+### 2. Braço (Receptor)
+Responsável por receber os pacotes BLE e controlar os servos motores.
+* **Arquivo Principal:** `sketch_cliente.ino`
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+Instale a [Arduino IDE](https://www.arduino.cc/en/software) e adicione as seguintes bibliotecas através do Gerenciador de Bibliotecas:
+
+1.  `SparkFunLSM6DS3` (para o sensor)
+2.  `Adafruit GFX Library` (para gráficos)
+3.  `Adafruit SH110X` (para o display OLED SH1106)
+4.  `ESP32Servo` (para controle dos motores)
+5.  Pacote de placas **ESP32 by Espressif Systems**.
+
+### Instalação
+
+1.  **Clone o repositório:**
+    ```bash
+    git clone [https://github.com/duduclash/luva-para-controle-de-bra-o-rob-tica-com-fus-o-de-sensores-e-comunica-o-sem-fio.git](https://github.com/duduclash/luva-para-controle-de-bra-o-rob-tica-com-fus-o-de-sensores-e-comunica-o-sem-fio.git)
+    ```
+2.  **Upload para a Luva:**
+    * Abra o arquivo `luvatcccorinthiansbimundial_copy_2025052621_copy_20250908191331.ino`.
+    * Selecione a placa "XIAO_ESP32C3".
+    * Conecte a luva via USB e faça o upload.
+3.  **Upload para o Braço:**
+    * Abra o arquivo `sketch_cliente.ino`.
+    * Selecione a placa "DOIT ESP32 DEVKIT V1".
+    * Conecte o ESP32 do braço via USB e faça o upload.
+
+## 👥 Autores
+
+Trabalho desenvolvido pelos alunos da ETEC Rubens de Faria e Souza (Sorocaba/SP):
+
+* **Bruno Machado Pires**
+* **Cauã Alves do Amaral**
+* **Eduardo Henrique Belmiro**
+* **Enzo Israel Domingues**
+* **Richard Henrique Pereira Siqueira**
+
+Orientador: Prof. Diego Bianchi Macedo.
+
+## 📄 Licença e Créditos
+
+* **Código:** Distribuído sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+* **Design do Braço 3D:** Todos os créditos do modelo mecânico (Robotic Arm 4.0) pertencem ao **Fabri Creator**.
