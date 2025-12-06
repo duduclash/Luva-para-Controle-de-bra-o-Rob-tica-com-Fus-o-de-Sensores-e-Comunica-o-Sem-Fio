@@ -44,32 +44,6 @@ Responsável pela leitura dos sensores, filtro complementar e servidor BLE.
 Responsável por receber os pacotes BLE e controlar os servos motores.
 * **Arquivo Principal:** `sketch_cliente.ino`
 
-## 🚀 Como Executar
-
-### Pré-requisitos
-Instale a [Arduino IDE](https://www.arduino.cc/en/software) e adicione as seguintes bibliotecas através do Gerenciador de Bibliotecas:
-
-1.  `SparkFunLSM6DS3` (para o sensor)
-2.  `Adafruit GFX Library` (para gráficos)
-3.  `Adafruit SH110X` (para o display OLED SH1106)
-4.  `ESP32Servo` (para controle dos motores)
-5.  Pacote de placas **ESP32 by Espressif Systems**.
-
-### Instalação
-
-1.  **Clone o repositório:**
-    ```bash
-    git clone [https://github.com/duduclash/luva-para-controle-de-bra-o-rob-tica-com-fus-o-de-sensores-e-comunica-o-sem-fio.git](https://github.com/duduclash/luva-para-controle-de-bra-o-rob-tica-com-fus-o-de-sensores-e-comunica-o-sem-fio.git)
-    ```
-2.  **Upload para a Luva:**
-    * Abra o arquivo `luvatcccorinthiansbimundial_copy_2025052621_copy_20250908191331.ino`.
-    * Selecione a placa "XIAO_ESP32C3".
-    * Conecte a luva via USB e faça o upload.
-3.  **Upload para o Braço:**
-    * Abra o arquivo `sketch_cliente.ino`.
-    * Selecione a placa "DOIT ESP32 DEVKIT V1".
-    * Conecte o ESP32 do braço via USB e faça o upload.
-
 ## 👥 Autores
 
 Trabalho desenvolvido pelos alunos da ETEC Rubens de Faria e Souza (Sorocaba/SP):
